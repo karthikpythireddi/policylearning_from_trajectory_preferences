@@ -16,3 +16,8 @@ logs/
 *.mp4
 libero.egg-info/
 .vscode/
+
+# CS234 project — large data/output files
+preference_data/
+videos/
+*.log

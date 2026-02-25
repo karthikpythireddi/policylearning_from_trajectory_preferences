@@ -211,7 +211,15 @@ def main(hydra_cfg):
 
             torch.save(result_summary, os.path.join(cfg.experiment_dir, f"result.pt"))
     else:
-        for i in range(n_tasks):
+        # Optional: restrict training to specific task IDs
+        train_task_ids = getattr(cfg, "train_task_ids", None)
+        if train_task_ids is not None:
+            active_task_ids = list(train_task_ids)
+            print(f"[info] restricting training to task IDs: {active_task_ids}")
+        else:
+            active_task_ids = list(range(n_tasks))
+
+        for seq_i, i in enumerate(active_task_ids):
             print(f"[info] start training on task {i}")
             algo.train()
 
@@ -223,20 +231,21 @@ def main(hydra_cfg):
             result_summary["L_fwd"][i] = l_fwd
             t1 = time.time()
 
-            # evalute on all seen tasks at the end of learning each task
+            # evaluate only on the active task IDs seen so far
             if cfg.eval.eval:
-                L = evaluate_loss(cfg, algo, benchmark, datasets[: i + 1])
+                seen_ids = [t for t in active_task_ids if t <= i]
+                L = evaluate_loss(cfg, algo, benchmark, [datasets[t] for t in seen_ids])
                 t2 = time.time()
                 S = evaluate_success(
                     cfg=cfg,
                     algo=algo,
                     benchmark=benchmark,
-                    task_ids=list(range((i + 1) * gsz)),
+                    task_ids=seen_ids,
                     result_summary=result_summary if cfg.eval.save_sim_states else None,
                 )
                 t3 = time.time()
-                result_summary["L_conf_mat"][i][: i + 1] = L
-                result_summary["S_conf_mat"][i][: i + 1] = S
+                result_summary["L_conf_mat"][i][: seq_i + 1] = L
+                result_summary["S_conf_mat"][i][: seq_i + 1] = S
 
                 if cfg.use_wandb:
                     wandb.run.summary["success_confusion_matrix"] = result_summary[
@@ -254,8 +263,8 @@ def main(hydra_cfg):
                     + f"eval loss time {(t2-t1)/60:.1f} "
                     + f"eval success time {(t3-t2)/60:.1f}"
                 )
-                print(("[Task %2d loss ] " + " %4.2f |" * (i + 1)) % (i, *L))
-                print(("[Task %2d succ.] " + " %4.2f |" * (i + 1)) % (i, *S))
+                print(("[Task %2d loss ] " + " %4.2f |" * (seq_i + 1)) % (i, *L))
+                print(("[Task %2d succ.] " + " %4.2f |" * (seq_i + 1)) % (i, *S))
                 torch.save(
                     result_summary, os.path.join(cfg.experiment_dir, f"result.pt")
                 )

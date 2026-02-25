@@ -22,3 +22,4 @@ task_embedding_one_hot_offset: 1
 pretrain: false
 pretrain_model_path: ""
 benchmark_name: "LIBERO_SPATIAL"
+train_task_ids: null  # if set (e.g. [0,3,4,7]), only train/eval these task IDs

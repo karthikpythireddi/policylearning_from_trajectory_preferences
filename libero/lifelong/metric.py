@@ -207,7 +207,7 @@ def evaluate_loss(cfg, algo, benchmark, datasets):
         dataloader = DataLoader(
             dataset,
             batch_size=cfg.eval.batch_size,
-            num_workers=cfg.eval.num_workers,
+            num_workers=0,
             shuffle=False,
         )
         test_loss = 0
