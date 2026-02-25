@@ -1,0 +1,26 @@
+algo: PPO
+
+# Phase 1: Reward model training
+rm_epochs: 20
+rm_lr: 0.0001
+
+# Phase 2: PPO fine-tuning
+ppo_iters: 30             # outer PPO iterations (each collects N rollouts)
+n_rollouts_per_iter: 2    # rollouts collected per iteration (reduced for GPU memory)
+ppo_epochs: 1             # inner PPO update epochs per iteration
+ppo_mini_batch: 8         # mini-batch size (small to fit 2 full models on 16GB GPU)
+
+# PPO hyperparameters
+clip_eps: 0.2             # clipping coefficient (ε)
+gamma: 0.99               # discount factor
+gae_lambda: 0.95          # GAE lambda for advantage estimation
+entropy_coef: 0.01        # entropy bonus (encourages exploration)
+value_coef: 0.5           # value loss coefficient
+
+# Rollout settings
+max_steps: 300            # max steps per rollout episode
+
+# Paths
+bc_checkpoint_dir: experiments/libero_10/SingleTask/BCTransformerPolicy_seed10000/run_003
+preference_data_dir: preference_data
+n_windows_per_pair: 5

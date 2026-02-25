@@ -1,0 +1,16 @@
+algo: DPO
+
+# KL penalty coefficient — controls how far the fine-tuned policy
+# is allowed to drift from the BC reference policy.
+# Lower β = more aggressive optimization, higher β = stay close to BC.
+dpo_beta: 0.1
+
+# Path to BC checkpoint directory (task{i}_model.pth files)
+bc_checkpoint_dir: experiments/libero_10/SingleTask/BCTransformerPolicy_seed10000/run_003
+
+# Path to preference data directory (task{i}_preferences.hdf5 files)
+preference_data_dir: preference_data
+
+# Number of seq_len windows to sample per preference pair
+# Total training samples = n_pairs × n_windows_per_pair
+n_windows_per_pair: 5

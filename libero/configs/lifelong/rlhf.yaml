@@ -1,0 +1,19 @@
+algo: RLHF
+
+# Phase 1: Reward model training
+rm_epochs: 20           # epochs to train the reward model on preference pairs
+rm_lr: 0.0001           # reward model learning rate
+
+# Phase 2: RWR fine-tuning
+rwr_temperature: 1.0    # softmax temperature for reward weights
+                        # lower = sharper weighting (more aggressive)
+                        # higher = more uniform weighting (closer to BC)
+
+# Path to BC checkpoint directory (task{i}_model.pth files)
+bc_checkpoint_dir: experiments/libero_10/SingleTask/BCTransformerPolicy_seed10000/run_003
+
+# Path to preference data directory (task{i}_preferences.hdf5 files)
+preference_data_dir: preference_data
+
+# Number of seq_len windows to sample per preference pair
+n_windows_per_pair: 5
