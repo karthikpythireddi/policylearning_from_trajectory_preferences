@@ -1,4 +1,4 @@
-# CS234 Final Project: RLHF for Robot Manipulation
+# CS234 Final Project: Policy Learning from Trajectory Preferences for Robot Manipulation - RLHF, PPO & DPO
 
 Fine-tuning BC policies with human preference feedback on the [LIBERO-10](https://github.com/Lifelong-Robot-Learning/LIBERO) benchmark.
 
