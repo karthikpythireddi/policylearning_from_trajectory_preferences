@@ -63,13 +63,12 @@ step_sft() {
     export MUJOCO_GL=egl
 
     python libero/lifelong/main.py \
-        ++benchmark_name=$TASK_SUITE \
-        ++policy=bc_transformer_policy \
-        ++algo=single_task \
-        ++exp_dir=experiments \
-        ++seed=$SEED \
-        ++train.n_epochs=50 \
-        ++train.batch_size=32
+        benchmark_name=$TASK_SUITE \
+        policy=bc_transformer_policy \
+        lifelong=single_task \
+        seed=$SEED \
+        train.n_epochs=50 \
+        train.batch_size=32
 
     echo "[3/6] BC training done. Checkpoint: $BC_CHECKPOINT_DIR"
 }
@@ -102,14 +101,13 @@ step_dpo() {
     export MUJOCO_GL=egl
 
     python libero/lifelong/main.py \
-        ++benchmark_name=$TASK_SUITE \
-        ++policy=bc_transformer_policy \
-        ++algo=dpo \
-        ++exp_dir=$OUTPUT_DIR/dpo \
-        ++seed=$SEED \
-        ++algo.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
-        ++algo.preference_data_dir=$PREFERENCE_DATA_DIR \
-        ++algo.dpo_beta=0.1
+        benchmark_name=$TASK_SUITE \
+        policy=bc_transformer_policy \
+        lifelong=dpo \
+        seed=$SEED \
+        lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
+        lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
+        lifelong.dpo_beta=0.1
 
     echo "[4/6] DPO done."
 }
@@ -120,14 +118,13 @@ step_rlhf() {
     export MUJOCO_GL=egl
 
     python libero/lifelong/main.py \
-        ++benchmark_name=$TASK_SUITE \
-        ++policy=bc_transformer_policy \
-        ++algo=rlhf \
-        ++exp_dir=$OUTPUT_DIR/rlhf \
-        ++seed=$SEED \
-        ++algo.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
-        ++algo.preference_data_dir=$PREFERENCE_DATA_DIR \
-        ++algo.rwr_temperature=1.0
+        benchmark_name=$TASK_SUITE \
+        policy=bc_transformer_policy \
+        lifelong=rlhf \
+        seed=$SEED \
+        lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
+        lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
+        lifelong.rwr_temperature=1.0
 
     echo "[5/6] RWR done."
 }
@@ -138,15 +135,14 @@ step_ppo() {
     export MUJOCO_GL=egl
 
     python libero/lifelong/main.py \
-        ++benchmark_name=$TASK_SUITE \
-        ++policy=bc_transformer_policy \
-        ++algo=ppo \
-        ++exp_dir=$OUTPUT_DIR/ppo \
-        ++seed=$SEED \
-        ++algo.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
-        ++algo.preference_data_dir=$PREFERENCE_DATA_DIR \
-        ++algo.ppo_iters=30 \
-        ++algo.n_rollouts_per_iter=4
+        benchmark_name=$TASK_SUITE \
+        policy=bc_transformer_policy \
+        lifelong=ppo \
+        seed=$SEED \
+        lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
+        lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
+        lifelong.ppo_iters=30 \
+        lifelong.n_rollouts_per_iter=4
 
     echo "[6/6] PPO done."
 }
