@@ -36,20 +36,11 @@ step_install() {
     # MuJoCo (no version pin — 2.3.7 has no cp312 wheel)
     pip install mujoco --quiet
 
-    # Core deps
+    # Install from requirements.txt (no strict version pins for Python 3.12 compat)
     pip install \
-        robosuite==1.4.1 \
-        robomimic \
-        bddl \
-        hydra-core \
-        easydict \
-        h5py \
-        einops \
-        wandb \
-        "imageio[ffmpeg]" \
-        termcolor \
-        transformers \
-        timm \
+        hydra-core easydict h5py einops wandb "imageio[ffmpeg]" termcolor \
+        robosuite robomimic bddl cloudpickle gym \
+        transformers timm thop future matplotlib opencv-python \
         --quiet
 
     # Install LIBERO package
