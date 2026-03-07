@@ -76,6 +76,28 @@ step_sft() {
     echo "[3/6] BC training done. Checkpoint: $BC_CHECKPOINT_DIR"
 }
 
+# ---- Step 3b: Rollout collection (preference data) --------------------------
+step_rollouts() {
+    echo "[3b/6] Collecting rollouts and preference pairs..."
+    export MUJOCO_GL=egl
+
+    # Find the hydra config from the SFT run
+    CFG_YAML=$(find experiments/libero_10/SingleTask -name "config.yaml" | head -1)
+    if [ -z "$CFG_YAML" ]; then
+        echo "ERROR: No hydra config found under experiments/libero_10/SingleTask."
+        echo "       Run 'bash launch_h100.sh sft' first."
+        exit 1
+    fi
+
+    python scripts/collect_preferences.py \
+        --cfg "$CFG_YAML" \
+        --checkpoint_dir "$BC_CHECKPOINT_DIR" \
+        --n_pairs 20 \
+        --output_dir "$PREFERENCE_DATA_DIR"
+
+    echo "[3b/6] Preference data saved to $PREFERENCE_DATA_DIR"
+}
+
 # ---- Step 4: DPO training ---------------------------------------------------
 step_dpo() {
     echo "[4/6] Running DPO..."
@@ -160,24 +182,27 @@ case $ALGO in
         step_install
         step_dataset
         step_sft
+        step_rollouts
         step_dpo
         step_rlhf
         step_ppo
         step_eval
         ;;
-    install)  step_install ;;
-    dataset)  step_install && step_dataset ;;
-    sft)      step_sft ;;
-    dpo)      step_dpo ;;
-    rlhf)     step_rlhf ;;
-    ppo)      step_ppo ;;
-    eval)     step_eval ;;
+    install)   step_install ;;
+    dataset)   step_install && step_dataset ;;
+    sft)       step_sft ;;
+    rollouts)  step_rollouts ;;
+    dpo)       step_dpo ;;
+    rlhf)      step_rlhf ;;
+    ppo)       step_ppo ;;
+    eval)      step_eval ;;
     *)
-        echo "Usage: bash launch_h100.sh [all|install|dataset|sft|dpo|rlhf|ppo|eval] [seed]"
-        echo "  all     - run full pipeline (default)"
-        echo "  install - install dependencies only"
-        echo "  dataset - install + download dataset"
-        echo "  sft     - train BC baseline"
+        echo "Usage: bash launch_h100.sh [all|install|dataset|sft|rollouts|dpo|rlhf|ppo|eval] [seed]"
+        echo "  all      - run full pipeline (default)"
+        echo "  install  - install dependencies only"
+        echo "  dataset  - install + download dataset"
+        echo "  sft      - train BC baseline"
+        echo "  rollouts - collect rollouts + preference pairs (requires SFT checkpoint)"
         echo "  dpo     - run DPO (requires BC checkpoint + preference data)"
         echo "  rlhf    - run RWR/RLHF (requires BC checkpoint + preference data)"
         echo "  ppo     - run PPO (requires BC checkpoint + preference data)"
