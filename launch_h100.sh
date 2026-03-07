@@ -38,7 +38,7 @@ step_install() {
 
     # Install from requirements.txt (no strict version pins for Python 3.12 compat)
     pip install \
-        hydra-core easydict h5py einops wandb "imageio[ffmpeg]" termcolor \
+        "hydra-core==1.3.2" easydict h5py einops wandb "imageio[ffmpeg]" termcolor \
         robosuite robomimic bddl cloudpickle gym \
         transformers timm thop future matplotlib opencv-python \
         --quiet
@@ -65,7 +65,7 @@ step_sft() {
     python libero/lifelong/main.py \
         benchmark_name=$TASK_SUITE \
         policy=bc_transformer_policy \
-        algo=single_task \
+        ++algo=single_task \
         exp_dir=experiments \
         seed=$SEED \
         train.n_epochs=50 \
