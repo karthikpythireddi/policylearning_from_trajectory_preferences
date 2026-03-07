@@ -68,7 +68,8 @@ step_sft() {
         lifelong=single_task \
         seed=$SEED \
         train.n_epochs=50 \
-        train.batch_size=32
+        train.batch_size=32 \
+        use_wandb=true
 
     echo "[3/6] BC training done. Checkpoint: $BC_CHECKPOINT_DIR"
 }
@@ -107,7 +108,8 @@ step_dpo() {
         seed=$SEED \
         lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
         lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
-        lifelong.dpo_beta=0.1
+        lifelong.dpo_beta=0.1 \
+        use_wandb=true
 
     echo "[4/6] DPO done."
 }
@@ -124,7 +126,8 @@ step_rlhf() {
         seed=$SEED \
         lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
         lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
-        lifelong.rwr_temperature=1.0
+        lifelong.rwr_temperature=1.0 \
+        use_wandb=true
 
     echo "[5/6] RWR done."
 }
@@ -142,7 +145,8 @@ step_ppo() {
         lifelong.bc_checkpoint_dir=$BC_CHECKPOINT_DIR \
         lifelong.preference_data_dir=$PREFERENCE_DATA_DIR \
         lifelong.ppo_iters=30 \
-        lifelong.n_rollouts_per_iter=4
+        lifelong.n_rollouts_per_iter=4 \
+        use_wandb=true
 
     echo "[6/6] PPO done."
 }
