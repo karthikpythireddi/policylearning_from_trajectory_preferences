@@ -55,7 +55,7 @@ step_install() {
 step_dataset() {
     echo "[2/6] Downloading LIBERO-10 dataset..."
     export MUJOCO_GL=egl
-    python benchmark_scripts/download_libero_datasets.py --datasets libero_10
+    python benchmark_scripts/download_libero_datasets.py --datasets libero_100
     echo "[2/6] Done."
 }
 
