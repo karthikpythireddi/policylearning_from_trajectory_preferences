@@ -19,3 +19,9 @@ libero.egg-info/
 # CS234 project — large data/output files
 preference_data/
 *.log
+*.hdf5
+*.mp4
+__pycache__/
+*.egg-info/
+.DS_Store
+nohup.out
