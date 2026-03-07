@@ -6,6 +6,9 @@
 # =============================================================================
 set -e
 
+# Ensure the repo root is always on PYTHONPATH so 'libero' package is importable
+export PYTHONPATH="$(cd "$(dirname "$0")" && pwd):${PYTHONPATH}"
+
 # ---- Config (edit these) ----------------------------------------------------
 ALGO=${1:-"all"}          # all | dpo | rlhf | ppo | sft | eval
 SEED=${2:-10000}
