@@ -30,8 +30,8 @@ step_install() {
     apt-get install -y libgl1-mesa-glx libegl1-mesa libgles2-mesa \
         libglib2.0-0 libsm6 libxext6 libxrender-dev ffmpeg 2>/dev/null || true
 
-    # MuJoCo
-    pip install mujoco==2.3.7 --quiet
+    # MuJoCo (no version pin — 2.3.7 has no cp312 wheel)
+    pip install mujoco --quiet
 
     # Core deps
     pip install \
