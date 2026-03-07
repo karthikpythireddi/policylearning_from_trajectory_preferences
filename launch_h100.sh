@@ -39,13 +39,17 @@ step_install() {
     # Core deps
     pip install \
         robosuite==1.4.1 \
+        robomimic \
+        bddl \
         hydra-core \
         easydict \
         h5py \
         einops \
         wandb \
-        imageio[ffmpeg] \
+        "imageio[ffmpeg]" \
         termcolor \
+        transformers \
+        timm \
         --quiet
 
     # Install LIBERO package
