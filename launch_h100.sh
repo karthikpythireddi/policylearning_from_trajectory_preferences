@@ -66,20 +66,20 @@ step_sft() {
     # Task 0 already trained (run_003/task0_model.pth).
     # Train tasks 1-9 in run_004.
     # Speed knobs vs original (50 epochs, batch=32, eval_every=5, n_eval=20):
-    #   n_epochs   50→25       saves ~50% training time
+    #   n_epochs   50→30       same as before (good convergence)
     #   batch_size 32→64       better GPU utilization (~20% faster per epoch)
-    #   eval_every  5→24       2 evals per task (epoch 0 + final) vs 10 before
+    #   eval_every  5→29       2 evals per task (epoch 0 + epoch 29 final) vs 10 before
     #   n_eval     20→10       halves eval wall-time (~74s vs ~148s per eval)
     #   eval.eval=false        skip post-task confusion matrix (not needed for RLHF)
-    # Estimated: ~25-30 min/task × 9 tasks ≈ 4-5 hours total
+    # Estimated: ~35-40 min/task × 9 tasks ≈ 5-6 hours total
     python libero/lifelong/main.py \
         benchmark_name=$TASK_SUITE \
         policy=bc_transformer_policy \
         lifelong=single_task \
         seed=$SEED \
-        train.n_epochs=25 \
+        train.n_epochs=30 \
         train.batch_size=64 \
-        eval.eval_every=24 \
+        eval.eval_every=29 \
         eval.n_eval=10 \
         eval.eval=false \
         "train_task_ids=[1,2,3,4,5,6,7,8,9]" \
