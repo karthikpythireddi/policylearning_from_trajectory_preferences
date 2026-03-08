@@ -138,7 +138,7 @@ def collect_preferences_for_task(
     init_states_path = os.path.join(
         cfg.init_states_folder, task.problem_folder, task.init_states_file
     )
-    init_states = torch.load(init_states_path)  # (N, state_dim)
+    init_states = torch.load(init_states_path, weights_only=False)  # (N, state_dim)
 
     env_args = {
         "bddl_file_name": os.path.join(

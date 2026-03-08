@@ -69,7 +69,7 @@ def evaluate_task(policy, task, task_emb, cfg, n_eval=20):
     init_states_path = os.path.join(
         cfg.init_states_folder, task.problem_folder, task.init_states_file
     )
-    init_states = torch.load(init_states_path)
+    init_states = torch.load(init_states_path, weights_only=False)
 
     successes = []
 
@@ -131,7 +131,7 @@ def record_video(policy, task, task_emb, cfg, video_path):
     init_states_path = os.path.join(
         cfg.init_states_folder, task.problem_folder, task.init_states_file
     )
-    init_states = torch.load(init_states_path)
+    init_states = torch.load(init_states_path, weights_only=False)
     init_state  = np.array(init_states[0])
 
     env.reset()

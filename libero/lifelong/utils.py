@@ -58,6 +58,7 @@ def torch_save_model(model, model_path, cfg=None, previous_masks=None):
 def torch_load_model(model_path, map_location=None):
     model_dict = torch.load(model_path, map_location=map_location, weights_only=False)
     cfg = None
+    previous_masks = None
     if "cfg" in model_dict:
         cfg = model_dict["cfg"]
     if "previous_masks" in model_dict:
