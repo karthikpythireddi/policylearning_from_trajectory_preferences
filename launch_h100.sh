@@ -13,7 +13,8 @@ export PYTHONPATH="$(cd "$(dirname "$0")" && pwd):${PYTHONPATH}"
 ALGO=${1:-"all"}          # all | dpo | rlhf | ppo | sft | eval
 SEED=${2:-10000}
 TASK_SUITE="libero_10"
-BC_CHECKPOINT_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_003"
+BC_CHECKPOINT_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_004"
+BC_TASK0_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_003"
 PREFERENCE_DATA_DIR="preference_data"
 OUTPUT_DIR="experiments/h100_results"
 # -----------------------------------------------------------------------------
@@ -59,17 +60,30 @@ step_dataset() {
 
 # ---- Step 3: SFT (BC baseline) ----------------------------------------------
 step_sft() {
-    echo "[3/6] Training BC baseline (SingleTask)..."
+    echo "[3/6] Training BC baseline (SingleTask) for tasks 1-9..."
     export MUJOCO_GL=egl
 
+    # Task 0 already trained (run_003/task0_model.pth).
+    # Train tasks 1-9 in run_004.
+    # eval.eval=false skips the post-task confusion matrix eval (in-epoch eval still runs).
+    # n_epochs=30 and batch_size=64 give ~2x speedup vs the original settings.
     python libero/lifelong/main.py \
         benchmark_name=$TASK_SUITE \
         policy=bc_transformer_policy \
         lifelong=single_task \
         seed=$SEED \
-        train.n_epochs=50 \
-        train.batch_size=32 \
+        train.n_epochs=30 \
+        train.batch_size=64 \
+        eval.eval_every=10 \
+        eval.eval=false \
+        "train_task_ids=[1,2,3,4,5,6,7,8,9]" \
         use_wandb=true
+
+    # Copy task 0 checkpoint into run_004 so rollout collection has all 10 tasks
+    if [ -f "$BC_TASK0_DIR/task0_model.pth" ]; then
+        cp "$BC_TASK0_DIR/task0_model.pth" "$BC_CHECKPOINT_DIR/task0_model.pth"
+        echo "[3/6] Copied task0_model.pth from run_003 -> run_004"
+    fi
 
     echo "[3/6] BC training done. Checkpoint: $BC_CHECKPOINT_DIR"
 }
@@ -79,13 +93,14 @@ step_rollouts() {
     echo "[3b/6] Collecting rollouts and preference pairs..."
     export MUJOCO_GL=egl
 
-    # Find the hydra config from the SFT run
-    CFG_YAML=$(find experiments/libero_10/SingleTask -name "config.yaml" | head -1)
+    # Find the hydra config from the most recent Hydra outputs dir
+    CFG_YAML=$(find outputs -name "config.yaml" -path "*/.hydra/*" | sort | tail -1)
     if [ -z "$CFG_YAML" ]; then
-        echo "ERROR: No hydra config found under experiments/libero_10/SingleTask."
+        echo "ERROR: No hydra config found under outputs/."
         echo "       Run 'bash launch_h100.sh sft' first."
         exit 1
     fi
+    echo "[3b/6] Using config: $CFG_YAML"
 
     python scripts/collect_preferences.py \
         --cfg "$CFG_YAML" \

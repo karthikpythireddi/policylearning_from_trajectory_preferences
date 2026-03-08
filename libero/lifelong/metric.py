@@ -121,10 +121,10 @@ def evaluate_one_task_success(
             for _ in range(5):
                 obs, _, _, _ = env.step(dummy)
 
-            if task_str != "":
+            if task_str != "" and sim_states is not None:
                 sim_state = env.get_sim_state()
                 for k in range(env_num):
-                    if i * env_num + k < cfg.eval.n_eval and sim_states is not None:
+                    if i * env_num + k < cfg.eval.n_eval:
                         sim_states[i * env_num + k].append(sim_state[k])
 
             while steps < cfg.eval.max_steps:
@@ -136,10 +136,10 @@ def evaluate_one_task_success(
                 obs, reward, done, info = env.step(actions)
 
                 # record the sim states for replay purpose
-                if task_str != "":
+                if task_str != "" and sim_states is not None:
                     sim_state = env.get_sim_state()
                     for k in range(env_num):
-                        if i * env_num + k < cfg.eval.n_eval and sim_states is not None:
+                        if i * env_num + k < cfg.eval.n_eval:
                             sim_states[i * env_num + k].append(sim_state[k])
 
                 # check whether succeed
