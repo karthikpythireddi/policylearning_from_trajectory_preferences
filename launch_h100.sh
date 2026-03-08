@@ -107,6 +107,40 @@ step_sft() {
     echo "[3/6] BC training done. All 10 checkpoints in: $BC_CHECKPOINT_DIR"
 }
 
+# ---- Step 3a: Merge checkpoints from fragmented run dirs --------------------
+step_merge_checkpoints() {
+    echo "[merge] Consolidating task checkpoints into latest run dir..."
+    local LATEST_RUN
+    LATEST_RUN=$(_find_bc_dir)
+    local ALL_RUNS
+    ALL_RUNS=$(ls -d "experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_"* \
+        2>/dev/null | sort -V)
+
+    for TASK_ID in {0..9}; do
+        local DEST="$LATEST_RUN/task${TASK_ID}_model.pth"
+        if [ -f "$DEST" ]; then
+            echo "[merge] task${TASK_ID}_model.pth already in $LATEST_RUN"
+            continue
+        fi
+        local FOUND=0
+        for RUN_DIR in $(echo "$ALL_RUNS" | tac); do
+            local SRC="$RUN_DIR/task${TASK_ID}_model.pth"
+            if [ -f "$SRC" ]; then
+                cp "$SRC" "$DEST"
+                echo "[merge] Copied task${TASK_ID}_model.pth from $RUN_DIR"
+                FOUND=1
+                break
+            fi
+        done
+        if [ "$FOUND" -eq 0 ]; then
+            echo "[merge] WARNING: task${TASK_ID}_model.pth not found in any run dir!"
+        fi
+    done
+
+    BC_CHECKPOINT_DIR=$LATEST_RUN
+    echo "[merge] Done. BC_CHECKPOINT_DIR=$BC_CHECKPOINT_DIR"
+}
+
 # ---- Step 3b: Rollout collection (preference data) --------------------------
 step_rollouts() {
     echo "[3b/6] Collecting rollouts and preference pairs..."
@@ -214,6 +248,7 @@ case $ALGO in
         step_install
         step_dataset
         step_sft
+        step_merge_checkpoints
         step_rollouts
         step_dpo
         step_rlhf
@@ -223,18 +258,20 @@ case $ALGO in
     install)   step_install ;;
     dataset)   step_install && step_dataset ;;
     sft)       step_sft ;;
-    rollouts)  step_rollouts ;;
+    merge)     step_merge_checkpoints ;;
+    rollouts)  step_merge_checkpoints && step_rollouts ;;
     dpo)       step_dpo ;;
     rlhf)      step_rlhf ;;
     ppo)       step_ppo ;;
     eval)      step_eval ;;
     *)
-        echo "Usage: bash launch_h100.sh [all|install|dataset|sft|rollouts|dpo|rlhf|ppo|eval] [seed]"
+        echo "Usage: bash launch_h100.sh [all|install|dataset|sft|merge|rollouts|dpo|rlhf|ppo|eval] [seed]"
         echo "  all      - run full pipeline (default)"
         echo "  install  - install dependencies only"
         echo "  dataset  - install + download dataset"
         echo "  sft      - train BC baseline"
-        echo "  rollouts - collect rollouts + preference pairs (requires SFT checkpoint)"
+        echo "  merge    - consolidate task*.pth from fragmented run dirs into latest run"
+        echo "  rollouts - merge checkpoints + collect preference pairs"
         echo "  dpo     - run DPO (requires BC checkpoint + preference data)"
         echo "  rlhf    - run RWR/RLHF (requires BC checkpoint + preference data)"
         echo "  ppo     - run PPO (requires BC checkpoint + preference data)"
