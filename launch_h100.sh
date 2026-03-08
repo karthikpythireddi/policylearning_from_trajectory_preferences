@@ -17,10 +17,14 @@ BC_TASK0_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/r
 PREFERENCE_DATA_DIR="preference_data"
 OUTPUT_DIR="experiments/h100_results"
 
-# BC_CHECKPOINT_DIR is resolved dynamically: the latest run_NNN dir that contains
-# task1_model.pth (i.e. the run that trained tasks 1-9).
-# Falls back to run_004 if not yet created (pre-SFT).
+# BC_CHECKPOINT_DIR resolves to the dedicated merged/ dir if it exists (preferred),
+# otherwise falls back to the latest run_NNN dir.
+MERGED_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/merged"
 _find_bc_dir() {
+    if [ -d "$MERGED_DIR" ]; then
+        echo "$MERGED_DIR"
+        return
+    fi
     local d
     d=$(ls -d "experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_"* \
         2>/dev/null | sort -V | tail -1)
@@ -108,18 +112,25 @@ step_sft() {
 }
 
 # ---- Step 3a: Merge checkpoints from fragmented run dirs --------------------
+# Always writes into MERGED_DIR (independent of any run_NNN being corrupted).
+# Search order: newest run_NNN first, so the most recent successful checkpoint wins.
 step_merge_checkpoints() {
-    echo "[merge] Consolidating task checkpoints into latest run dir..."
-    local LATEST_RUN
-    LATEST_RUN=$(_find_bc_dir)
+    echo "[merge] Consolidating task checkpoints into: $MERGED_DIR"
+    mkdir -p "$MERGED_DIR"
+
     local ALL_RUNS
     ALL_RUNS=$(ls -d "experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_"* \
         2>/dev/null | sort -V)
 
+    if [ -z "$ALL_RUNS" ]; then
+        echo "[merge] ERROR: No run_* directories found. Run SFT first."
+        exit 1
+    fi
+
     for TASK_ID in {0..9}; do
-        local DEST="$LATEST_RUN/task${TASK_ID}_model.pth"
+        local DEST="$MERGED_DIR/task${TASK_ID}_model.pth"
         if [ -f "$DEST" ]; then
-            echo "[merge] task${TASK_ID}_model.pth already in $LATEST_RUN"
+            echo "[merge] task${TASK_ID}_model.pth already present, skipping."
             continue
         fi
         local FOUND=0
@@ -127,7 +138,7 @@ step_merge_checkpoints() {
             local SRC="$RUN_DIR/task${TASK_ID}_model.pth"
             if [ -f "$SRC" ]; then
                 cp "$SRC" "$DEST"
-                echo "[merge] Copied task${TASK_ID}_model.pth from $RUN_DIR"
+                echo "[merge] task${TASK_ID}_model.pth  ← $RUN_DIR"
                 FOUND=1
                 break
             fi
@@ -137,7 +148,7 @@ step_merge_checkpoints() {
         fi
     done
 
-    BC_CHECKPOINT_DIR=$LATEST_RUN
+    BC_CHECKPOINT_DIR=$MERGED_DIR
     echo "[merge] Done. BC_CHECKPOINT_DIR=$BC_CHECKPOINT_DIR"
 }
 
