@@ -13,10 +13,20 @@ export PYTHONPATH="$(cd "$(dirname "$0")" && pwd):${PYTHONPATH}"
 ALGO=${1:-"all"}          # all | dpo | rlhf | ppo | sft | eval
 SEED=${2:-10000}
 TASK_SUITE="libero_10"
-BC_CHECKPOINT_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_004"
 BC_TASK0_DIR="experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_003"
 PREFERENCE_DATA_DIR="preference_data"
 OUTPUT_DIR="experiments/h100_results"
+
+# BC_CHECKPOINT_DIR is resolved dynamically: the latest run_NNN dir that contains
+# task1_model.pth (i.e. the run that trained tasks 1-9).
+# Falls back to run_004 if not yet created (pre-SFT).
+_find_bc_dir() {
+    local d
+    d=$(ls -d "experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_"* \
+        2>/dev/null | sort -V | tail -1)
+    echo "${d:-experiments/libero_10/SingleTask/BCTransformerPolicy_seed${SEED}/run_004}"
+}
+BC_CHECKPOINT_DIR=$(_find_bc_dir)
 # -----------------------------------------------------------------------------
 
 echo "============================================================"
@@ -68,10 +78,10 @@ step_sft() {
     # Speed knobs vs original (50 epochs, batch=32, eval_every=5, n_eval=20):
     #   n_epochs   50→30       same as before (good convergence)
     #   batch_size 32→64       better GPU utilization (~20% faster per epoch)
-    #   eval_every  5→29       2 evals per task (epoch 0 + epoch 29 final) vs 10 before
+    #   eval_every  5→9        4 evals (epochs 0,9,18,27) — captures peak vs 10 before
     #   n_eval     20→10       halves eval wall-time (~74s vs ~148s per eval)
     #   eval.eval=false        skip post-task confusion matrix (not needed for RLHF)
-    # Estimated: ~35-40 min/task × 9 tasks ≈ 5-6 hours total
+    # Estimated: ~40-45 min/task × 9 tasks ≈ 6-7 hours total
     python libero/lifelong/main.py \
         benchmark_name=$TASK_SUITE \
         policy=bc_transformer_policy \
@@ -79,19 +89,22 @@ step_sft() {
         seed=$SEED \
         train.n_epochs=30 \
         train.batch_size=64 \
-        eval.eval_every=29 \
+        eval.eval_every=9 \
         eval.n_eval=10 \
         eval.eval=false \
         "train_task_ids=[1,2,3,4,5,6,7,8,9]" \
         use_wandb=true
 
-    # Copy task 0 checkpoint into run_004 so rollout collection has all 10 tasks
+    # Refresh BC_CHECKPOINT_DIR to the newly created run dir, then copy task0 in.
+    BC_CHECKPOINT_DIR=$(_find_bc_dir)
     if [ -f "$BC_TASK0_DIR/task0_model.pth" ]; then
         cp "$BC_TASK0_DIR/task0_model.pth" "$BC_CHECKPOINT_DIR/task0_model.pth"
-        echo "[3/6] Copied task0_model.pth from run_003 -> run_004"
+        echo "[3/6] Copied task0_model.pth: $BC_TASK0_DIR -> $BC_CHECKPOINT_DIR"
+    else
+        echo "[3/6] WARNING: $BC_TASK0_DIR/task0_model.pth not found — skipping copy."
     fi
 
-    echo "[3/6] BC training done. Checkpoint: $BC_CHECKPOINT_DIR"
+    echo "[3/6] BC training done. All 10 checkpoints in: $BC_CHECKPOINT_DIR"
 }
 
 # ---- Step 3b: Rollout collection (preference data) --------------------------
