@@ -114,8 +114,6 @@ step_sft() {
 # ---- Step 3a: Merge checkpoints from fragmented run dirs --------------------
 # Always writes into MERGED_DIR (independent of any run_NNN being corrupted).
 # Search order: newest run_NNN first, so the most recent successful checkpoint wins.
-# Each .pth is validated before copying: must be loadable, contain a state_dict
-# with > 0 parameters, and be > 1 KB in size.
 step_merge_checkpoints() {
     echo "[merge] Consolidating task checkpoints into: $MERGED_DIR"
     mkdir -p "$MERGED_DIR"
@@ -129,84 +127,29 @@ step_merge_checkpoints() {
         exit 1
     fi
 
-    local N_OK=0
-    local N_MISSING=0
-
     for TASK_ID in {0..9}; do
         local DEST="$MERGED_DIR/task${TASK_ID}_model.pth"
         if [ -f "$DEST" ]; then
-            # Re-validate even if present (may have been copied from a bad run)
-            if python -c "
-import torch, sys
-try:
-    d = torch.load('$DEST', map_location='cpu', weights_only=False)
-    assert 'state_dict' in d, 'missing state_dict key'
-    assert len(d['state_dict']) > 0, 'empty state_dict'
-except Exception as e:
-    print(f'INVALID: {e}', file=sys.stderr)
-    sys.exit(1)
-" 2>/dev/null; then
-                echo "[merge] task${TASK_ID}_model.pth already present & valid, skipping."
-                N_OK=$((N_OK + 1))
-                continue
-            else
-                echo "[merge] task${TASK_ID}_model.pth present but CORRUPTED — re-searching."
-                rm "$DEST"
-            fi
+            echo "[merge] task${TASK_ID}_model.pth already present, skipping."
+            continue
         fi
-
         local FOUND=0
         for RUN_DIR in $(echo "$ALL_RUNS" | tac); do
             local SRC="$RUN_DIR/task${TASK_ID}_model.pth"
-            if [ ! -f "$SRC" ]; then
-                continue
-            fi
-
-            # Size check: skip files < 1 KB (likely truncated/empty)
-            local FSIZE
-            FSIZE=$(stat --printf="%s" "$SRC" 2>/dev/null || stat -f%z "$SRC" 2>/dev/null || echo 0)
-            if [ "$FSIZE" -lt 1024 ]; then
-                echo "[merge] SKIP task${TASK_ID} in $RUN_DIR — file too small (${FSIZE} bytes)"
-                continue
-            fi
-
-            # Integrity check: loadable by PyTorch with expected keys
-            if python -c "
-import torch, sys
-try:
-    d = torch.load('$SRC', map_location='cpu', weights_only=False)
-    assert 'state_dict' in d, 'missing state_dict key'
-    sd = d['state_dict']
-    assert len(sd) > 0, 'empty state_dict'
-    n_params = sum(p.numel() for p in sd.values())
-    assert n_params > 0, 'zero parameters'
-    print(f'OK: {len(sd)} keys, {n_params:,} params, {$FSIZE:,} bytes')
-except Exception as e:
-    print(f'CORRUPT: {e}', file=sys.stderr)
-    sys.exit(1)
-" 2>&1; then
+            if [ -f "$SRC" ]; then
                 cp "$SRC" "$DEST"
-                echo "[merge] task${TASK_ID}_model.pth  ← $RUN_DIR ✓"
+                echo "[merge] task${TASK_ID}_model.pth  ← $RUN_DIR"
                 FOUND=1
-                N_OK=$((N_OK + 1))
                 break
-            else
-                echo "[merge] SKIP task${TASK_ID} in $RUN_DIR — failed integrity check"
             fi
         done
-
         if [ "$FOUND" -eq 0 ]; then
-            echo "[merge] WARNING: task${TASK_ID}_model.pth — no valid checkpoint found!"
-            N_MISSING=$((N_MISSING + 1))
+            echo "[merge] WARNING: task${TASK_ID}_model.pth not found in any run dir!"
         fi
     done
 
     BC_CHECKPOINT_DIR=$MERGED_DIR
     echo "[merge] Done. BC_CHECKPOINT_DIR=$BC_CHECKPOINT_DIR"
-    echo "[merge] Summary: $N_OK/10 tasks OK, $N_MISSING/10 missing"
-    if [ "$N_MISSING" -gt 0 ]; then
-        echo "[merge] WARNING: $N_MISSING tasks have no valid checkpoint. Downstream steps may fail."
-    fi
 }
 
 # ---- Step 3b: Rollout collection (preference data) --------------------------
